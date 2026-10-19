@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Team Omega SACCO</string>
+    <string name="sacco_tagline">Team Omega Smart SACCO Financial Services</string>
+    <string name="developed_by">Designed and Developed by Team Omega</string>
+    <string name="admin_portal_title">Team Omega Admin Portal</string>
+    <string name="default_web_client_id">347115084146-webclientid.apps.googleusercontent.com</string>
+</resources>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MobileBasedSACCOManagement">
+
+        <!-- Splash Launcher -->
+        <activity
+            android:name=".activities.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MobileBasedSACCOManagement">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Authentication -->
+        <activity
+            android:name=".activities.LoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".RegisterActivity"
+            android:exported="false" />
+
+        <!-- Member Features -->
+        <activity
+            android:name=".activities.MemberMainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.MemberDashboardActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.ProfileActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.SavingsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.LoanApplicationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.LoanListActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.LoanRepaymentActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.TransactionsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.SharesActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.NotificationsActivity"
+            android:exported="false" />
+
+        <!-- Administrator Features -->
+        <activity
+            android:name=".activities.AdminDashboardActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.AdminMemberManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.AdminLoanManagementActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.AdminAnnouncementsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.AdminReportsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".PinActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+    </application>
+
+</manifest>
