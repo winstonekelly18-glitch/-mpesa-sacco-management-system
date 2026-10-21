@@ -144,11 +144,14 @@ public class LoanRepaymentActivity extends AppCompatActivity {
             binding.btnSubmitRepayment.setEnabled(false);
             binding.btnSubmitRepayment.setText("Sending M-Pesa STK Prompt...");
 
-            String testPhone = "254708374149";
+            String userPhone = ref; // User can type their phone number in reference or default to session
+            if (TextUtils.isEmpty(userPhone) || userPhone.length() < 9) {
+                userPhone = "254708374149"; // Default Daraja test phone
+            }
             int intAmount = (int) amount;
             String accountRef = selectedLoan.getLoanNumber();
 
-            MpesaHelper.stkPush(testPhone, intAmount, accountRef, new MpesaHelper.PayCallback() {
+            MpesaHelper.stkPush(userPhone, intAmount, accountRef, new MpesaHelper.PayCallback() {
                 @Override
                 public void onPushSent(String checkoutRequestId, String message) {
                     runOnUiThread(() -> {
