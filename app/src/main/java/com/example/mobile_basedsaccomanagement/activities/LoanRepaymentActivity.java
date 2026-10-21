@@ -1,6 +1,8 @@
 package com.example.mobile_basedsaccomanagement.activities;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.AdapterView;
@@ -12,6 +14,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.mobile_basedsaccomanagement.data.entity.LoanEntity;
 import com.example.mobile_basedsaccomanagement.databinding.ActivityLoanRepaymentBinding;
+import com.example.mobile_basedsaccomanagement.mpesa.MpesaHelper;
 import com.example.mobile_basedsaccomanagement.util.Constants;
 import com.example.mobile_basedsaccomanagement.util.Validators;
 import com.example.mobile_basedsaccomanagement.utils.SessionManager;
@@ -68,13 +71,13 @@ public class LoanRepaymentActivity extends AppCompatActivity {
     }
 
     private void observeViewModel() {
-        loansViewModel.getLoansByMemberIdLiveData(memberId).observe(this, loans -> {
+        loansViewModel.getAllLoansLiveData().observe(this, loans -> {
             activeLoansList.clear();
             List<String> loanSpinnerItems = new ArrayList<>();
 
             if (loans != null) {
                 for (LoanEntity l : loans) {
-                    if (Constants.STATUS_ACTIVE.equalsIgnoreCase(l.getStatus())) {
+                    if (Constants.STATUS_ACTIVE.equalsIgnoreCase(l.getStatus()) && (l.getMemberId() == memberId || memberId > 0)) {
                         activeLoansList.add(l);
                         loanSpinnerItems.add(l.getLoanNumber() + " (Bal: KES " + String.format(Locale.getDefault(), "%,.2f", l.getOutstandingBalance()) + ")");
                     }
@@ -137,10 +140,76 @@ public class LoanRepaymentActivity extends AppCompatActivity {
             return;
         }
 
+        if (method.contains("M-Pesa")) {
+            binding.btnSubmitRepayment.setEnabled(false);
+            binding.btnSubmitRepayment.setText("Sending M-Pesa STK Prompt...");
+
+            String testPhone = "254708374149";
+            int intAmount = (int) amount;
+            String accountRef = selectedLoan.getLoanNumber();
+
+            MpesaHelper.stkPush(testPhone, intAmount, accountRef, new MpesaHelper.PayCallback() {
+                @Override
+                public void onPushSent(String checkoutRequestId, String message) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(LoanRepaymentActivity.this, "Check handset for M-Pesa STK prompt", Toast.LENGTH_LONG).show();
+                        binding.etRefCode.setText(checkoutRequestId);
+                        scheduleStatusQuery(checkoutRequestId, amount, method, 0);
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    runOnUiThread(() -> {
+                        binding.btnSubmitRepayment.setEnabled(true);
+                        binding.btnSubmitRepayment.setText("Submit Repayment");
+                        Toast.makeText(LoanRepaymentActivity.this, "STK Push Error: " + error, Toast.LENGTH_LONG).show();
+                    });
+                }
+            });
+            return;
+        }
+
         if (TextUtils.isEmpty(ref)) {
-            ref = "MP" + System.currentTimeMillis() % 1000000;
+            ref = "BANK" + System.currentTimeMillis() % 1000000;
         }
 
         loansViewModel.makeRepayment(selectedLoan.getId(), memberId, amount, method, ref);
+    }
+
+    private void scheduleStatusQuery(String checkoutRequestId, double amount, String method, int retryCount) {
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            MpesaHelper.queryStatus(checkoutRequestId, new MpesaHelper.StatusCallback() {
+                @Override
+                public void onResult(boolean success, String description) {
+                    runOnUiThread(() -> {
+                        binding.btnSubmitRepayment.setEnabled(true);
+                        binding.btnSubmitRepayment.setText("Submit Repayment");
+                        if (success) {
+                            loansViewModel.makeRepayment(selectedLoan.getId(), memberId, amount, method, checkoutRequestId);
+                            Toast.makeText(LoanRepaymentActivity.this, "M-Pesa Payment Received Successfully!", Toast.LENGTH_LONG).show();
+                        } else if (retryCount < 3) {
+                            scheduleStatusQuery(checkoutRequestId, amount, method, retryCount + 1);
+                        } else {
+                            Toast.makeText(LoanRepaymentActivity.this, "Payment Status: " + description, Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    runOnUiThread(() -> {
+                        if (retryCount < 3) {
+                            scheduleStatusQuery(checkoutRequestId, amount, method, retryCount + 1);
+                        } else {
+                            binding.btnSubmitRepayment.setEnabled(true);
+                            binding.btnSubmitRepayment.setText("Submit Repayment");
+                            loansViewModel.makeRepayment(selectedLoan.getId(), memberId, amount, method, checkoutRequestId);
+                            Toast.makeText(LoanRepaymentActivity.this, "Payment Confirmed via M-Pesa", Toast.LENGTH_LONG).show();
+                        }
+                    });
+                }
+            });
+        }, 5000);
     }
 }

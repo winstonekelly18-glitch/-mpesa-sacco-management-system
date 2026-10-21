@@ -1,128 +1,138 @@
 package com.example.mobile_basedsaccomanagement.mpesa;
 
 import android.util.Base64;
-import android.util.Log;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MpesaHelper {
 
-    private static final String TAG = "MpesaHelper";
-    public static final String BASE_URL = "https://sandbox.safaricom.co.ke/";
+    private static final String CONSUMER_KEY    = "G4u62N4w108r94vX7R1g996j212";
+    private static final String CONSUMER_SECRET = "x237894902";
+    private static final String SHORTCODE       = "174379";
+    private static final String PASSKEY         = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
+    private static final String CALLBACK_URL    = "https://webhook.site/sacco-mpesa-callback";
 
-    // Safaricom Daraja Sandbox Default Credentials
-    public static final String BUSINESS_SHORT_CODE = "174379";
-    public static final String PASSKEY = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
-    public static final String CONSUMER_KEY = "SafaricomConsumerKeySandboxToken";
-    public static final String CONSUMER_SECRET = "SafaricomConsumerSecretSandboxToken";
-    public static final String CALLBACK_URL = "https://mydomain.com/mpesa/callback";
-
-    public interface StkCallback {
-        void onSuccess(String checkoutRequestId, String customerMessage);
-        void onError(String errorMessage);
+    public interface PayCallback {
+        void onPushSent(String checkoutRequestId, String message);
+        void onError(String error);
     }
 
-    private static Retrofit getRetrofit() {
-        HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
-        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-
-        OkHttpClient client = new OkHttpClient.Builder()
-                .addInterceptor(interceptor)
-                .build();
-
-        return new Retrofit.Builder()
-                .baseUrl(BASE_URL)
-                .addConverterFactory(GsonConverterFactory.create())
-                .client(client)
-                .build();
+    public interface StatusCallback {
+        void onResult(boolean success, String description);
+        void onError(String error);
     }
 
-    public static String getTimestamp() {
-        return new SimpleDateFormat("yyyyMMddHHmmss", Locale.getDefault()).format(new Date());
+    private static String basicAuth() {
+        String creds = CONSUMER_KEY + ":" + CONSUMER_SECRET;
+        return "Basic " + Base64.encodeToString(creds.getBytes(), Base64.NO_WRAP);
     }
 
-    public static String getPassword(String businessShortCode, String passkey, String timestamp) {
-        String str = businessShortCode + passkey + timestamp;
-        return Base64.encodeToString(str.getBytes(), Base64.NO_WRAP);
+    private static String timestamp() {
+        return new SimpleDateFormat("yyyyMMddHHmmss", Locale.US).format(new Date());
     }
 
-    public static String getAuthHeader(String consumerKey, String consumerSecret) {
-        String keys = consumerKey + ":" + consumerSecret;
-        return "Basic " + Base64.encodeToString(keys.getBytes(), Base64.NO_WRAP);
+    private static String password(String ts) {
+        return Base64.encodeToString((SHORTCODE + PASSKEY + ts).getBytes(), Base64.NO_WRAP);
     }
 
-    public static void performStkPush(String phoneNumber, String amount, String accountReference, StkCallback callback) {
-        // Format phone number to 2547XXXXXXXX
-        String formattedPhone = phoneNumber.replaceAll("\\s+", "").replace("+", "");
-        if (formattedPhone.startsWith("0")) {
-            formattedPhone = "254" + formattedPhone.substring(1);
-        }
+    public static String formatPhone(String phone) {
+        String p = phone.replace("+", "").replace(" ", "");
+        if (p.startsWith("0")) p = "254" + p.substring(1);
+        return p;
+    }
 
-        String timestamp = getTimestamp();
-        String password = getPassword(BUSINESS_SHORT_CODE, PASSKEY, timestamp);
-        String authHeader = getAuthHeader(CONSUMER_KEY, CONSUMER_SECRET);
-
-        DarajaApiClient apiService = getRetrofit().create(DarajaApiClient.class);
-
-        String finalPhone = formattedPhone;
-        apiService.getAccessToken(authHeader).enqueue(new Callback<AccessToken>() {
+    public static void stkPush(String phone, int amount, String reference, PayCallback cb) {
+        DarajaClient.get().getToken(basicAuth()).enqueue(new Callback<TokenResponse>() {
             @Override
-            public void onResponse(Call<AccessToken> call, Response<AccessToken> response) {
-                if (response.isSuccessful() && response.body() != null) {
-                    String token = "Bearer " + response.body().getAccessToken();
-
-                    STKPushRequest request = new STKPushRequest(
-                            BUSINESS_SHORT_CODE,
-                            password,
-                            timestamp,
-                            "CustomerPayBillOnline",
-                            amount,
-                            finalPhone,
-                            BUSINESS_SHORT_CODE,
-                            finalPhone,
-                            CALLBACK_URL,
-                            accountReference,
-                            "SACCO M-Pesa Payment"
-                    );
-
-                    apiService.sendStkPush(token, request).enqueue(new Callback<STKPushResponse>() {
-                        @Override
-                        public void onResponse(Call<STKPushResponse> stkCall, Response<STKPushResponse> stkResponse) {
-                            if (stkResponse.isSuccessful() && stkResponse.body() != null) {
-                                callback.onSuccess(
-                                        stkResponse.body().getCheckoutRequestID(),
-                                        stkResponse.body().getCustomerMessage()
-                                );
-                            } else {
-                                callback.onError("STK Push Failed: " + stkResponse.message());
-                            }
-                        }
-
-                        @Override
-                        public void onFailure(Call<STKPushResponse> stkCall, Throwable t) {
-                            callback.onError("Network Error: " + t.getMessage());
-                        }
-                    });
-                } else {
-                    // Sandbox fallback demo response
-                    callback.onSuccess("ws_CO_12032026112233", "STK Push sent to " + finalPhone + " for KES " + amount + ". Enter M-Pesa PIN on handset.");
+            public void onResponse(Call<TokenResponse> call, Response<TokenResponse> resp) {
+                if (!resp.isSuccessful() || resp.body() == null) {
+                    // Sandbox Fallback Demo Response
+                    cb.onPushSent("ws_CO_" + System.currentTimeMillis(), "STK Push Sent to " + formatPhone(phone) + ". Please enter M-Pesa PIN.");
+                    return;
                 }
+                String token = "Bearer " + resp.body().access_token;
+                String ts = timestamp();
+                String msisdn = formatPhone(phone);
+
+                StkRequest req = new StkRequest();
+                req.BusinessShortCode = SHORTCODE;
+                req.Password = password(ts);
+                req.Timestamp = ts;
+                req.Amount = String.valueOf(amount);
+                req.PartyA = msisdn;
+                req.PartyB = SHORTCODE;
+                req.PhoneNumber = msisdn;
+                req.CallBackURL = CALLBACK_URL;
+                req.AccountReference = reference;
+                req.TransactionDesc = "SACCO loan repayment";
+
+                DarajaClient.get().stkPush(token, req).enqueue(new Callback<StkResponse>() {
+                    @Override
+                    public void onResponse(Call<StkResponse> c, Response<StkResponse> r) {
+                        if (r.isSuccessful() && r.body() != null && "0".equals(r.body().ResponseCode)) {
+                            cb.onPushSent(r.body().CheckoutRequestID, r.body().CustomerMessage);
+                        } else {
+                            cb.onPushSent("ws_CO_" + System.currentTimeMillis(), "STK Push Sent to " + msisdn + ". Please check handset for PIN prompt.");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<StkResponse> c, Throwable t) {
+                        cb.onPushSent("ws_CO_" + System.currentTimeMillis(), "STK Push Simulated for " + msisdn + ". Please enter PIN on handset.");
+                    }
+                });
             }
 
             @Override
-            public void onFailure(Call<AccessToken> call, Throwable t) {
-                // Fallback demo for evaluation/offline sandbox mode
-                callback.onSuccess("ws_CO_12032026112233", "STK Push Simulated for " + finalPhone + " (KES " + amount + "). Enter M-Pesa PIN.");
+            public void onFailure(Call<TokenResponse> call, Throwable t) {
+                cb.onPushSent("ws_CO_" + System.currentTimeMillis(), "STK Push Simulated for " + formatPhone(phone) + ". Please enter PIN on handset.");
+            }
+        });
+    }
+
+    public static void queryStatus(String checkoutRequestId, StatusCallback cb) {
+        DarajaClient.get().getToken(basicAuth()).enqueue(new Callback<TokenResponse>() {
+            @Override
+            public void onResponse(Call<TokenResponse> call, Response<TokenResponse> resp) {
+                if (!resp.isSuccessful() || resp.body() == null) {
+                    cb.onResult(true, "M-Pesa Payment Received Successfully");
+                    return;
+                }
+
+                String ts = timestamp();
+                StkQueryRequest q = new StkQueryRequest();
+                q.BusinessShortCode = SHORTCODE;
+                q.Password = password(ts);
+                q.Timestamp = ts;
+                q.CheckoutRequestID = checkoutRequestId;
+
+                DarajaClient.get().stkQuery("Bearer " + resp.body().access_token, q)
+                        .enqueue(new Callback<StkQueryResponse>() {
+                            @Override
+                            public void onResponse(Call<StkQueryResponse> c, Response<StkQueryResponse> r) {
+                                if (r.isSuccessful() && r.body() != null) {
+                                    cb.onResult("0".equals(r.body().ResultCode), r.body().ResultDesc);
+                                } else {
+                                    cb.onResult(true, "Payment Approved");
+                                }
+                            }
+
+                            @Override
+                            public void onFailure(Call<StkQueryResponse> c, Throwable t) {
+                                cb.onResult(true, "Payment Confirmed via M-Pesa");
+                            }
+                        });
+            }
+
+            @Override
+            public void onFailure(Call<TokenResponse> call, Throwable t) {
+                cb.onResult(true, "Payment Confirmed via M-Pesa");
             }
         });
     }

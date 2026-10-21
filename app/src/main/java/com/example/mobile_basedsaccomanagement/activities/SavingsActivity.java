@@ -120,9 +120,9 @@ public class SavingsActivity extends AppCompatActivity {
             btnSendStk.setEnabled(false);
             btnSendStk.setText("Sending Prompt...");
 
-            MpesaHelper.performStkPush(phone, amountStr, "SAVINGS-" + userId, new MpesaHelper.StkCallback() {
+            MpesaHelper.stkPush(phone, (int) amount, "SAVINGS-" + userId, new MpesaHelper.PayCallback() {
                 @Override
-                public void onSuccess(String checkoutRequestId, String customerMessage) {
+                public void onPushSent(String checkoutRequestId, String customerMessage) {
                     dbHelper.depositSavings(userId, amount, "M-Pesa STK Deposit (" + checkoutRequestId + ")");
                     Toast.makeText(SavingsActivity.this, customerMessage, Toast.LENGTH_LONG).show();
                     loadSavingsData();

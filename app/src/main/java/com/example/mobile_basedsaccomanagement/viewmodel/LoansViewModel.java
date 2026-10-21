@@ -44,6 +44,10 @@ public class LoansViewModel extends AndroidViewModel {
         return db.loanDao().getLoansByMemberIdLiveData(memberId);
     }
 
+    public LiveData<List<LoanEntity>> getAllLoansLiveData() {
+        return db.loanDao().getAllLoansLiveData();
+    }
+
     public LiveData<List<LoanRepaymentEntity>> getRepaymentsForLoanLiveData(long loanId) {
         return db.loanRepaymentDao().getRepaymentsForLoanLiveData(loanId);
     }
