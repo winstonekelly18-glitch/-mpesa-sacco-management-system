@@ -144,9 +144,9 @@ public class LoanRepaymentActivity extends AppCompatActivity {
             binding.btnSubmitRepayment.setEnabled(false);
             binding.btnSubmitRepayment.setText("Sending M-Pesa STK Prompt...");
 
-            String userPhone = ref; // User can type their phone number in reference or default to session
+            String userPhone = ref; // User can type their phone number in reference or default
             if (TextUtils.isEmpty(userPhone) || userPhone.length() < 9) {
-                userPhone = "254708374149"; // Default Daraja test phone
+                userPhone = "254715500738"; // User Daraja registered phone
             }
             int intAmount = (int) amount;
             String accountRef = selectedLoan.getLoanNumber();

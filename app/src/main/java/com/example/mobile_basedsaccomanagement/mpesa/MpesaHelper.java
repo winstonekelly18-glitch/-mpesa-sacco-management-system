@@ -12,8 +12,8 @@ import retrofit2.Response;
 
 public class MpesaHelper {
 
-    private static final String CONSUMER_KEY    = "G4u62N4w108r94vX7R1g996j212";
-    private static final String CONSUMER_SECRET = "x237894902";
+    private static final String CONSUMER_KEY    = "OcOA2KgqO7YPK0DLIHQfGB2GeOyS06ls52LIOilVPqNOAhWq";
+    private static final String CONSUMER_SECRET = "SRdPNqUtMxaA76y6T2I4JILBA9sqqzSfxFpXPSFU7q1LuevgXhN0xz0sJB79MEG";
     private static final String SHORTCODE       = "174379";
     private static final String PASSKEY         = "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919";
     private static final String CALLBACK_URL    = "https://webhook.site/sacco-mpesa-callback";

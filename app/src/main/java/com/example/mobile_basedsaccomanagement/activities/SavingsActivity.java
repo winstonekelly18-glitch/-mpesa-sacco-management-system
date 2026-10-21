@@ -96,7 +96,7 @@ public class SavingsActivity extends AppCompatActivity {
         Button btnCancel = dialogView.findViewById(R.id.btnCancelMpesa);
         Button btnSendStk = dialogView.findViewById(R.id.btnSendStkPush);
 
-        etPhone.setText("254712345678");
+        etPhone.setText("254715500738");
 
         AlertDialog dialog = builder.create();
 
